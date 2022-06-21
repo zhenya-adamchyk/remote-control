@@ -1,9 +1,11 @@
 import Jimp from 'jimp';
-
 import { WebSocketServer } from 'ws';
 import { draw } from './actions/draw';
 import { move } from './actions/mouseMove';
+import { screenShoot } from './actions/saveImg';
+import robot from 'robotjs';
 import { httpServer } from './src/http_server/index';
+import { getMousePosition } from './actions/getMousePosition';
 
 const HTTP_PORT = 3000;
 
@@ -17,7 +19,7 @@ const wss = new WebSocketServer({port: 8080})
 
 wss.on('connection', (ws) => {
         console.log('connected');
-        ws.on('message', (message) => {
+        ws.on('message', async (message) => {
             const messageString = message.toString()
             
             const isMoveAction = !!moveActions.find(action => action === messageString.split(' ')[0])
@@ -29,10 +31,18 @@ wss.on('connection', (ws) => {
             } else if (isDrawAction) {
                 draw(messageString)
                 ws.send(messageString)
+            } else if (messageString === 'prnt_scrn') {
+                let base64 = await screenShoot()
+                base64 = base64.replace('data:image/png;base64,', '')
+                ws.send(`prnt_scrn ${base64}`)
+            } else if (messageString === 'mouse_position') {
+                const data = getMousePosition()
+                ws.send(`mouse_position ${data[0]},${data[1]}`)
             }
+            // 
 
 
-            // console.log('message', message.toString());
+            console.log('message', message.toString());
 
             });
     });
